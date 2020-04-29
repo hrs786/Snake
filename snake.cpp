@@ -11,7 +11,7 @@
 
 
 #include<bits/stdc++.h>
-#include<windows.h> // For MS Windows only 
+#include<windows.h> // For MS Windows only
 using namespace std;
 
 // Classes declaration
@@ -20,9 +20,11 @@ class Food;
 class Snake;
 
 // Point on screen/board in terms of (x,y)
+// 1-based indexing/positioning
 struct position{
 	int x,y;
 
+	// Constructors
     position(){}
 	position(int a, int b):x(a),y(b){}
 };
@@ -30,7 +32,8 @@ struct position{
 // Board class definition
 class Board{
 private:
-	int height,width; // height(along y), width(along x) of Board
+	int height,width; // height(along y), width(along x) of Playable Board
+	char symbol;
 	char** field;	  // char 2D-array for storing values present on Board
 public:
 	// Constructor
@@ -38,16 +41,18 @@ public:
 		height = 20; // initializing height of board
 		width = 50;  // initializing width of board
 
+		symbol = '*';
+
 		// dynamic memory allocation for board
-		field = new char*[height];
-		for(int i=0;i<height;i++)
-			field[i] = new char[width];
+		field = new char*[height+2];
+		for(int i=0;i<height+2;i++)
+			field[i] = new char[width+2];
 	}
 
 	//Destructor
 	~Board(){
 		// deallocating dynamic memory allocated previously
-		for(int i=0;i<height;i++)
+		for(int i=0;i<height+2;i++)
 			delete[] field[i];
 
 		delete[] field;
@@ -55,8 +60,8 @@ public:
 
 	// print board on screen
 	void show_board(){
-		for(int i=0;i<height;i++){
-			for(int j=0;j<width;j++){
+		for(int i=0;i<height+2;i++){
+			for(int j=0;j<width+2;j++){
 				cout<<field[i][j];
 			}
 			cout<<endl;
@@ -65,10 +70,20 @@ public:
 
 	// clean the board
 	void clear_board(){
-		for(int i=0;i<height;i++){
-			for(int j=0;j<width;j++)
+		for(int i=0;i<height+2;i++){
+			for(int j=0;j<width+2;j++)
 				field[i][j]=' ';
 		}
+
+		//set boundary
+		for(int i=0;i<width+2;i++)
+			field[0][i]=symbol;
+		for(int i=0;i<width+2;i++)
+			field[height+1][i]=symbol;
+		for(int i=0;i<height+2;i++)
+			field[i][0]=symbol;
+		for(int i=0;i<height+2;i++)
+			field[i][width+1]=symbol;
 	}
 
 	// returns board height
@@ -84,6 +99,11 @@ public:
 	// set value on board
 	void set_on_board(int row, int col, char c){
 		field[row][col]=c;
+	}
+
+	// return boundary symbol
+	char get_boundary_symbol(){
+		return symbol;
 	}
 
 }field; //object with name "field" of class "Board"
@@ -112,12 +132,12 @@ public:
 
 	// returns x-coordinate of food
 	int get_food_x(){
-		return food_point.x;
+		return 1+food_point.x;
 	}
 
 	// returns y-coordinate of food
 	int get_food_y(){
-		return food_point.y;
+		return 1+food_point.y;
 	}
 
 	// return food symbol
@@ -128,7 +148,7 @@ public:
 }eatable;
 
 // Few important points w.r.t functioning :-
-// Snake lenght increases after eating food, 
+// Snake lenght increases after eating food,
 // so here also it increases after it has passed food block i.e eaten food
 
 // Snake class definition
@@ -144,7 +164,7 @@ public:
 	// Constructor
 	Snake(int x = 3, int y = 3):body_head_symbol('@'),body_part_symbol('o'),dir(DOWN),body_size(1){
 		// set position of head
-		position tmp(x,y);
+		position tmp(x+1,y+1);
 		body.push_back(tmp);
 
 		head = body[0];
@@ -171,7 +191,8 @@ public:
 	}
 
 	// gets player input for direction of head and store in dir
-	// windows.h --> GetAsyncKeyState
+	// windows.h --> GetAsyncKeyState --> checks if key was pressed after a previous call
+	// VK_[key_name] refers to virtual key code
 	void get_input(){
 		if(GetAsyncKeyState(VK_UP) && dir != DOWN)
 			dir = UP;
@@ -185,8 +206,6 @@ public:
 
 	// movement of snake
 	void move(){
-		//speed = 1
-
 		// stores modification in head
 		position head_modify(0,0);
 		if(dir == UP)
@@ -210,10 +229,11 @@ public:
 		body[0]=head;
 
 		// Kills snake if it hits any wall
-		if(head.x < 0 || head.y <0 || head.x>=field.get_board_width() || head.y>=field.get_board_height()){
-			cout<<"SNAKE DEAD.....!!!!"<<endl;
-			exit(0);
+		if(head.x <= 0 || head.y <= 0 || head.x >= 1+field.get_board_width() || head.y >= 1+field.get_board_height()){
+			throw (string)"SNAKE DEAD.....!!!!";
 		}
+			// try-catch is better (than like exit()) as it does proper cleanup(calls destructors)
+			// For more details - https://stackoverflow.com/questions/30250934/how-to-end-c-code
 
 	}
 
@@ -244,10 +264,25 @@ public:
 }player; // object "player" of class "Snake"
 
 
+// hide cursor function only in windowed mode (i.e not full screen)
+// Reference : https://superuser.com/questions/1496322/how-do-i-remove-hide-the-cursor-the-blinking-underscore-character-in-cmd-exe
+void hide_cursor(){
+	HANDLE hStdOut = NULL;
+    CONSOLE_CURSOR_INFO curInfo;
+
+    hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    GetConsoleCursorInfo(hStdOut, &curInfo);
+    curInfo.bVisible = FALSE;
+    SetConsoleCursorInfo(hStdOut, &curInfo);
+}
+
 // main function
 int main(){
 
-	// random seed for rand function
+    //hides cursor
+	hide_cursor();
+
+	// cuurent unix time in seconds as seed for rand function
 	srand(time(0));
 
 	//sets initial food position
@@ -258,7 +293,16 @@ int main(){
 		field.clear_board(); // clears board
 		player.get_input();  // finds if user has pressed any key until previous execution of loop
 
-		player.move();		 // moves snake
+		// moves snake
+		try{
+			player.move();
+		}
+		catch(string err){
+			field.clear_board();
+			cout<<err<<endl;
+			system("pause"); // pause system and wait for key press, MS Windows (NOT Linux)
+			return 0;
+		}
 
         field.set_on_board(eatable.get_food_y(),eatable.get_food_x(),eatable.get_food_symbol()); //set food on board
 		player.set_snake_onboard(field); // set snake on board
@@ -270,6 +314,7 @@ int main(){
 
 		field.show_board(); // prints board
 
+		Sleep(40);		// Windows.h --> milliseconds for which to stop execution
 		system("cls"); // clear screen
 
 	}
