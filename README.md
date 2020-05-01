@@ -6,7 +6,7 @@ This game has been written in Object-Oriented Programming paradigm in C++ langua
 
 ### versions
 - version_1 : snake has to eat food without colliding walls but can pass through it
-- version_2 : snake can no longer collide(addition in version_1)
+- version_2 : snake can no longer collide with itself version_1)
 
 ### Controls
 - Arrow keys
