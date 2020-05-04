@@ -351,7 +351,7 @@ int main(){
 
 		field.show_board(); // prints board
 
-		Sleep(100);		// Windows.h --> milliseconds for which to stop execution, slows speed of snake
+		Sleep(300);		// Windows.h --> milliseconds for which to stop execution, slows speed of snake
 		system("cls"); // clear screen
 
 	}
